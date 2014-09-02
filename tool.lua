@@ -1,6 +1,8 @@
 local Class = require 'luaTool.Class'
 local tool = Class:new()
-
+local gsub = string.gsub
+local insert = table.insert
+--change table to string
 function tool:table2string(t)
     if type(t) ~= 'table' then 
         return tostring(t)
@@ -19,5 +21,36 @@ function tool:table2string(t)
     return '{' .. str ..'}'
 end
 
+--check if table in nil , if use next, when tbl={a={},b={}},next(tbl) is ture
+--but we need to know whether it has any member, so false is returned when you use
+--this function checkNilTable(tbl)
+function tool:checkNilTable(tbl)
+    if not tbl then
+        return true
+    end
+    if type(tbl) ~= 'table' then
+        return false
+    end
+    if  not next(tbl) then
+        return true
+    end
+    local sign = true
+    for k,v in pairs(tbl) do
+        if not self:checkNilTable(v) then
+            sign = false
+            break
+        end
+    end
+    return sign
+end
+
+function tool:split(str, sep)
+    if not str or not sep then 
+        return nil
+    end
+    local t = {}
+    gsub(str, '[^' .. sep .. ']+', function(w) insert(t,w) end)
+    return t
+end
 return tool
 
