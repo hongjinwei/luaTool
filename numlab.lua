@@ -9,6 +9,7 @@
 --      [3] = {3,4,5,6,7}
 --}
 local cjson = require 'cjson'
+local getn = table.getn
 
 lab = {}
 lab.version = '0.0.1'
@@ -16,13 +17,208 @@ lab.version = '0.0.1'
 --------------------------------------------------------------
 ------ local util function
 -------------------------------------------------------------
+local function LAB_ERROR(msg)
+    print('ERROR!')
+    if msg then 
+        print(msg)
+    end
+end
+
+-------------------------------------------------------------
+------- array calculation
+-------------------------------------------------------------
 local function array_len(array)
     if not string.find(array.datatype, 'a') then 
-        return nil, "not a array type"
+        return 0, "not a array type"
     end
     return #(array.data)
 end
 
+local function array_add(a,b)
+    if type(a) ~= 'table' and type(b) ~= 'table' then 
+        return nil
+    end
+    if a.datatype ~= b.datatype then 
+        return nil
+    end
+    if a.size ~= b.size then 
+        return nil
+    end
+    local data = {}
+    for i=1,#(a.data) do
+        data[#(data) + 1] = a.data[i] + b.data[i]
+    end
+    local t
+    if a.datatype == 'a_t' then 
+        t = 't'
+    end
+    return lab.array(data,t)
+end
+
+local function array_sub(a,b)
+    if type(a) ~= 'table' and type(b) ~= 'table' then 
+        return nil
+    end
+    if a.datatype ~= b.datatype then 
+        return nil
+    end
+    if a.size ~= b.size then 
+        return nil
+    end
+    local data = {}
+    for i=1,#(a.data) do
+        data[#(data) + 1] = a.data[i] - b.data[i]
+    end
+    local t
+    if a.datatype == 'a_t' then 
+        t = 't'
+    end
+    return lab.array(data,t)
+end
+
+local function array_mul(a,b)
+    if type(a) == 'number' and type(b) == 'table' then 
+        local data = {}
+        for i=1,b.size do
+            data[#data+1] = a * b.data[i]
+        end
+        local t
+        if b.datatype == 'a_t' then 
+            t = 't'
+        end
+        return lab.array(data,t)
+    elseif type(a) == 'table' and type(b) == 'number' then 
+        local data = {}
+        for i=1,a.size do
+            data[#data+1] = b * a.data[i]
+        end
+        local t
+        if a.datatype == 'a_t' then 
+            t = 't'
+        end
+        return lab.array(data,t)
+    elseif type(a) == 'table' and type(b) == 'table' then 
+        if a.size ~= a.size then 
+            return nil
+        end
+        if a.datatype == b.datatype then 
+            local data = {}
+            for i=1,a.size do
+                data[#data+1] = (a.data[i]) * (b.data[i])
+            end
+            local t
+            if a.datatype == 'a_t' then 
+                t = 't'
+            end
+            return lab.array(data,t)
+        elseif a.datatype == 'a' and b.datatype == 'a_t' then 
+            local data = {}
+            data[1] = {}  
+            for i=1,a.size do
+                data[1][i] = (a.data[i]) * (b.data[i])
+            end
+            return lab.matrix(data)
+        elseif a.datatype == 'a_t' and b.datatype == 'a' then 
+            local data = {}
+            for i=1,a.size do
+                data[i] ={}
+                for j=1,b.size do
+                    data[i][j] = a.data[i] * b.data[j]
+                end
+            end
+            return lab.matrix(data)
+        end
+    else
+        return nil
+    end
+end
+
+local function array_div(a,b)
+    if type(a) == 'number' and type(b) == 'table' then 
+        return nil
+    elseif type(a) == 'table' and type(b) == 'number' then 
+        local data = {}
+        for i=1,a.size do
+            data[#data+1] = a.data[i] / b
+        end
+        local t
+        if a.datatype == 'a_t' then 
+            t = 't'
+        end
+        return lab.array(data,t)
+    elseif type(a) == 'table' and type(b) == 'table' then 
+        if a.size ~= a.size then 
+            return nil
+        end
+        if a.datatype == b.datatype then 
+            local data = {}
+            for i=1,a.size do
+                data[#data+1] = (a.data[i]) / (b.data[i])
+            end
+            local t
+            if a.datatype == 'a_t' then 
+                t = 't'
+            end
+            return lab.array(data,t)
+        else
+            return nil
+        end
+    else
+        return nil
+    end
+end
+
+local function array_concat(a,b)
+    if type(a) == 'number' or type(b) == 'number' then 
+        local data
+        local datatype
+        if type(a) == 'table' then 
+            data = a.data
+            datatype = a.datatype
+            data[#data+1] = b
+        elseif type(b) == 'table' then 
+            data = {}
+            data[1] = a
+            for i=1,b.size do
+                data[#data + 1] = b.data[i]
+            end
+            datatype = b.datatype
+        end
+        local t
+        if datatype == 'a_t' then 
+            t = 't'
+        end
+        return lab.array(data,t)
+    elseif a.datatype == 'a' and b.datatype == 'a' then 
+        if a.size ~= b.size then 
+            return nil, "error size"
+        end
+        data = {}
+        data[1] = {}
+        data[2] = {}
+        for i=1,b.size do
+            data[1][i] = a.data[i]
+            data[2][i] = b.data[i]
+        end
+        return lab.matrix(data)
+    elseif a.datatype == 'a_t' and b.datatype == 'a_t' then 
+        if a.size ~= b.size then 
+            return nil, "error size"
+        end
+        data = {}
+        for i=1,a.size do
+            data[i] = {}
+            data[i][1] = a.data[i]
+            data[i][2] = b.data[i]
+        end
+        return lab.matrix(data)
+    else
+        return nil
+    end
+end
+--------------------------------------------------------------
+--------matrix calculation
+--------------------------------------------------------------
 local function matrix_size(matrix)
     if type(matrix) ~= 'table' or not string.find(matrix.datatype, 'm') 
           or not next(matrix.data) then 
@@ -35,6 +231,20 @@ local function matrix_size(matrix)
     return size
 end
 
+local function matrix_add(a,b)
+end
+
+local function matrix_sub(a,b)
+end
+
+local function matrix_mul(a,b)
+end
+
+local function matrix_div(a,b)
+end
+----------------------------------------------------------------
+----------other function
+----------------------------------------------------------------
 local function judge_cal(a, b, op)
     if op == '+' or op == '-' then 
         if string.find(a.datatype, 'a') and string.find(b.datatype, 'a') then
@@ -50,7 +260,6 @@ local function judge_cal(a, b, op)
         end
     end
     if op == '*' or op == '/' then 
-
     end
 end
 ---------------------------------------------
@@ -59,6 +268,9 @@ end
 function lab.array(tbl,t)
     if not tbl or type(tbl) ~= 'table' then 
         return nil, "not table datatype or a nil table!"
+    end
+    if not getn(tbl) and getn(tbl) == 0  then 
+        return nil, "error table"
     end
     local array = {}
     if not t then 
@@ -71,6 +283,11 @@ function lab.array(tbl,t)
         array.data[#(array.data) + 1] = v
     end
     local mt = {
+        __add = array_add,
+        __sub = array_sub,
+        __mul = array_mul,
+        __div = array_div,
+        __concat = array_concat,
         __index = {
             size = array_len(array),
             T = function()  
@@ -198,27 +415,27 @@ function lab.tostring(obj)
     end
 end
 
-function lab.plus(a1, a2)
-    if a1.datatype ~= a2.datatype then 
-       return  nil, "not same datatype or exists transferred array"
+function lab.I(matrix)
+    if type(matrix) ~= 'table' or not string.find(matrix.datatype, 'm') 
+        or not next(matrix.data) then 
+        return nil, "not a correct data"
     end
-
+    local data = matrix.data
+    local size = matrix.size
+    if size.len == size.height then 
+        return nil, "not a correct matrix"
+    end
+    local new = lab.eye (size.len)
     
-    if a1.datatype == 'a' then 
-        result = matlab.array(a1) 
-        len = #(result.data)
-        for i=1, len do
-        end
-    end
 end
 
 
 array = lab.array({1,2,3})
-c = lab.array({2,3,4},'t')
+c = lab.array({2,3,4})
 print(lab.tostring(array))
-print(lab.tostring(c))
-
-
+--print(lab.tostring(c))
+local res = array .. c
+print(lab.tostring(res))
 a = {
     {1,2,3,4},
     {2,3,4,6}
