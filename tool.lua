@@ -2,6 +2,7 @@ local Class = require 'luaTool.Class'
 local tool = Class:new()
 local gsub = string.gsub
 local insert = table.insert
+local lower = string.lower
 --change table to string
 function tool:table2string(t)
     if type(t) ~= 'table' then 
@@ -54,3 +55,11 @@ function tool:split(str, sep)
 end
 return tool
 
+--change a string type to boolean type which should be bool type
+function tool:tobool(s)
+    if not s then return false end
+    if type(s) == 'boolean' then return s end
+    if type(s) == 'string' then 
+        return (lower(s) == 'true') and true or false
+    end
+end
